@@ -74,6 +74,9 @@
       "Bash(docker system prune*)",
       "Bash(mkfs*)",
       "Bash(dd if=*)",
+      "Bash(source /dev/*)"
+    ],
+    "ask": [
       "Bash(eval *)",
       "Bash(bash -c *)",
       "Bash(/bin/bash -c *)",
@@ -92,10 +95,8 @@
       "Bash(perl -e *)",
       "Bash(/usr/bin/perl -e *)",
       "Bash(xargs *)",
-      "Bash(open http*)",
-      "Bash(source /dev/*)"
-    ],
-    "ask": []
+      "Bash(open http*)"
+    ]
   },
   "model": "fable[1m]",
   "enabledMcpjsonServers": [

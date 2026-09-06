@@ -3,6 +3,24 @@
 > Claude Code harness hooks — opt-in handlers for 21 lifecycle events.
 > Hooks fire inside the Claude Code runtime, read JSON from stdin, and gate behavior via exit codes.
 
+## Where hook wiring lives (single source of truth)
+
+**Hook registrations live in the repo-root [`settings.json`](../settings.json) `hooks` block — nowhere else.**
+
+There is deliberately **no `hooks/hooks.json`** in this repo. Claude Code treats that exact
+path as a *plugin hooks manifest* and requires a top-level `"hooks"` wrapper; a file there that
+does not match the schema makes the **entire plugin fail to load** — agents, skills and
+commands included (#52, #57). We previously shipped one as a "reference document", which both
+broke plugin installs and drifted out of sync with `settings.json` (its `timeout` values were
+written in milliseconds, while Claude Code reads **seconds**).
+
+Consequences to keep in mind when editing hooks:
+
+- Add or change a hook → edit `settings.json` only. Do not re-create `hooks/hooks.json`.
+- `timeout` is in **seconds** (`5`, `10`, `180`), not milliseconds.
+- Hooks are installed by `install.sh` / `install.ps1` (Method A), not by plugin install —
+  see [`docs/PLUGIN-VS-INSTALL-SH.md`](../docs/PLUGIN-VS-INSTALL-SH.md).
+
 ## Event Catalog
 
 Claude Code exposes **27 hookable events** across 7 categories (official catalog as of 2026-04-23). claude-forge ships examples for the 21 most common; the remaining 6 are listed below without examples — implement per project need. Install only what you need.
@@ -10,16 +28,23 @@ Claude Code exposes **27 hookable events** across 7 categories (official catalog
 | Category | Event | Trigger | Common Use | Example |
 |----------|-------|---------|------------|---------|
 | Session | `SessionStart` | New session boots / `--continue` resume | Inject context, warm caches, print banners | `context-sync-suggest.sh` |
-| Session | `SessionEnd` | Clean session shutdown | Persist summary, sync TODAY.md | `work-tracker-stop.sh` |
+| Session | `SessionStart` | Session resumes right after `/compact` (matcher: `compact`) | Restore the next-task pointer left before compaction (relay skill) | `post-compact-restore.sh` |
+| Session | `SessionStart` | New session boots | Replay the previous session's time report, once | `session-time-report.sh` (`FORGE_SESSION_MODE=report`) |
+| Session | `SessionEnd` | Clean session shutdown | Measure end time, elapsed, prompt/tool/file counts and file the report | `session-time-report.sh` |
 | Turn | `UserPromptSubmit` | User sends a prompt | Track activity, pre-flight checks | `work-tracker-prompt.sh` |
 | Turn | `Stop` | Assistant finishes a clean turn | Nudge session-wrap, commit suggest | `session-wrap-suggest.sh` |
+| Turn | `Stop` | Assistant finishes a clean turn | Persist the work-tracking buffer, trigger sync | `work-tracker-stop.sh` |
 | Turn | `StopFailure` | Session ends abnormally (crash, rate-limit) | Dump crash report, set recovery flag | `examples/stop-failure.sh.example` |
+| Turn | `StopFailure` | Session dies on a retryable API error (529 / 5xx / stalled stream) | Schedule an unattended resume, under fork-bomb caps — see [`rules/api-error-recovery.md`](../rules/api-error-recovery.md) | `api-error-auto-resume.sh` |
 | Tool | `PreToolUse` | Before a tool runs | Guard destructive commands, rate-limit MCP | `remote-command-guard.sh` |
 | Tool | `PostToolUse` | After a tool runs (success OR failure) | Filter output secrets, log usage | `output-secret-filter.sh` |
+| Tool | `PostToolUse` | Edit/Write to the same file 5+ times in a session | Doom-loop guard — nudge a rethink | `loop-detection.sh` |
+| Tool | `PostToolUse` | Edit/Write to a `.ts`/`.tsx`/`.js`/`.jsx`/`.py` file | Lightweight type/syntax check, surface fixable errors | `auto-verify-fix.sh` |
+| Tool | `PostToolUse` | Edit/Write to a `.md` file whose content is substantially Korean | Flag em-dash (—/–) AI-tell interjections — see [`rules/korean-writing-quality.md`](../rules/korean-writing-quality.md) | `emdash-slop-guard.sh` |
 | Tool | `PostToolUseFailure` | Tool returns non-zero (failure only) | Escalate repeated failures, alert | `examples/post-tool-use-failure.sh.example` |
 | Subagent | `SubagentStart` | Task tool spawns a subagent | Record subagent name + start time | `examples/subagent-start.sh.example` |
 | Subagent | `SubagentStop` | Subagent finishes (success or failure) | Log duration, cost accounting | `examples/subagent-stop.sh.example` |
-| Context | `PreCompact` | Before context compaction runs | Snapshot TODAY.md / plan.md | `examples/pre-compact.sh.example` |
+| Context | `PreCompact` | Before context compaction runs | Snapshot `plan.md` / `auto-loop-todo.md` / `decisions.md` | `pre-compact-snapshot.sh` |
 | Context | `PostCompact` | After compaction completes | Persist summary for audit/relay | `examples/post-compact.sh.example` |
 | System | `ConfigChange` | `settings.json` mutated | Revalidate schema, reload hooks | (custom) |
 | System | `CwdChanged` | Working directory changes | Reset project context | (custom) |
@@ -44,6 +69,56 @@ The following 6 events are defined in the official Claude Code spec (see [code.c
 | `Elicitation` | Hook or tool requests structured input from the user |
 | `ElicitationResult` | User response to an elicitation is captured |
 | `TaskStatusChanged` | Any `TaskUpdate` mutates a task's status field (not just completion) |
+
+## Running a hook under Codex
+
+Codex 0.150 ships its own hook runtime with the same event names and a compatible
+stdin payload, so a script written for Claude Code usually runs there unchanged.
+`install.sh` does not touch `~/.codex/`, so that wiring stays yours to add.
+
+`session-time-report.sh` is written for both. It decides the transcript dialect
+line by line, so it reads a Claude Code transcript and a Codex rollout log alike:
+
+| Counted | Claude Code | Codex |
+|---------|-------------|-------|
+| prompt | `type: user` with text content | `response_item` / `message`, `role: user` (`developer` is the harness, not you) |
+| tool call | a `tool_use` block | `custom_tool_call` or `function_call` |
+| changed file | `Edit` / `Write` `file_path` | the `*** Add\|Update\|Delete File:` header of an apply_patch envelope |
+
+To wire it, add to `~/.codex/hooks.json`:
+
+```json
+{
+  "hooks": {
+    "SessionEnd": [
+      { "hooks": [ { "type": "command", "command": "FORGE_SESSION_MAX_SEC=2 ~/.claude/hooks/session-time-report.sh", "timeout": 3 } ] }
+    ],
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "FORGE_SESSION_MODE=report ~/.claude/hooks/session-time-report.sh", "timeout": 3 } ] }
+    ]
+  }
+}
+```
+
+Three things you have to know, all of them measured against `codex 0.150.1`:
+
+- **A new hook does not run until you trust it.** Codex keeps its own hook-trust
+  record, and an entry it has not seen before is skipped with no error and no
+  output at all. Open the hooks screen in the Codex TUI and trust them, or pass
+  `--dangerously-bypass-hook-trust` for a single automated invocation. Editing a
+  hook you had already trusted puts it back into review, so re-trust after a
+  change. If your report never appears, check this first: nothing else about it
+  looks like a failure.
+- **Codex clamps a SessionEnd hook to 3 seconds**, whatever `timeout` you write,
+  and says so when it loads the config. That is below this hook's own 4-second
+  default scan budget, so the recipe above sets `FORGE_SESSION_MAX_SEC=2`: the
+  scan gives up on its own terms before Codex kills it, and you get no report
+  rather than a half-read one.
+- Codex flushes the tail of its rollout log before it fires `SessionEnd`, so the
+  transcript is already complete when the hook reads it.
+
+If your other Codex `SessionStart` hooks go through a stdin-draining wrapper,
+send this one the same way. It drains stdin itself, so a bare entry works too.
 
 ## Hook Handler Types
 

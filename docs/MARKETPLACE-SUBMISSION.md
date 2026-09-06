@@ -5,8 +5,9 @@
 > Submission form: <https://clau.de/plugin-directory-submission>
 >
 > **Status (2026-04-24):** Ready for submission. All items in the reviewer-facing
-> checklist (§6) are verified against `main` at commit 51bef80. This document is the
-> final submission packet — values in §7 are ready to paste.
+> checklist (§6) were verified against `main` at commit 51bef80 for v3.0.1;
+> v4.0.0 re-verification is pending. This document is the final submission
+> packet — values in §7 are ready to paste.
 
 ## 1. Plugin Metadata (paste into the submission form)
 
@@ -17,7 +18,7 @@
 | Public repository | <https://github.com/sangrokjung/claude-forge> |
 | Homepage | <https://github.com/sangrokjung/claude-forge> |
 | License | MIT |
-| Current version | `3.0.1` |
+| Current version | `4.3.0` |
 | Manifest file | `.claude-plugin/plugin.json` |
 | Marketplace manifest | `.claude-plugin/marketplace.json` |
 | Category | development |
@@ -25,25 +26,31 @@
 
 ## 2. One-paragraph pitch
 
-claude-forge is an "oh-my-zsh for Claude Code" — a cohesive distribution of 11 specialized
-agents, 33 slash commands, 24 skills, 15 automation hooks (plus 9 opt-in examples covering
-21 lifecycle events), 9 rule files, and a minimal 4-server MCP set (playwright, context7,
-jina-reader, chrome-devtools pinned at `@0.23.0`). It targets individual developers and
-small teams who want a production-grade, security-reviewed baseline without hand-assembling
-the 2026 Anthropic Claude Code standard (Skills/Commands split, 21 hook events, subagent
-frontmatter v2). One install gives the complete set, and `install.sh --upgrade` migrates
-v2.1 users in place with backup + diff preview.
+claude-forge is an "oh-my-zsh for Claude Code" — a cohesive distribution of 16 specialized
+agents, 35 slash commands, 33 skills, 22 automation hooks (plus 9 opt-in examples covering
+21 lifecycle events), 14 rule files, and a minimal 4-server MCP set (playwright, context7,
+jina-reader, chrome-devtools pinned at `@0.23.0`). v4.0 adds an adversarial verification
+loop (maker≠checker, dispatched until an independent reviewer issues APPROVE), unattended
+API-error auto-resume, session relay across context compaction, and Korean prose quality
+guardrails. It targets individual developers and small teams who want a production-grade,
+security-reviewed baseline without hand-assembling the 2026 Anthropic Claude Code standard
+(Skills/Commands split, 21 hook events, subagent frontmatter v2). One install gives the
+complete set, and `install.sh --upgrade` migrates prior users in place with backup + diff
+preview.
 
 ## 3. What users get (inventory)
 
-- **11 agents** with frontmatter v2 (planner, tdd-guide, code-reviewer, security-reviewer,
+- **16 agents** with frontmatter v2 (planner, tdd-guide, code-reviewer, security-reviewer,
   architect, database-reviewer, build-error-resolver, doc-updater, refactor-cleaner,
-  e2e-runner, verify-agent)
-- **33 commands** (`/auto-ship`, `/plan`, `/review`, `/e2e`, `/worktree-start`, ...)
-- **24 skills** under `skills/<name>/SKILL.md`
-- **15 hooks + 9 opt-in examples** covering 21 of the 27 official hook events
-- **9 rules** (Golden Principles, interaction, coding-style, verification, security,
-  testing, git-workflow, date-calculation, agents-v2)
+  e2e-runner, verify-agent, adversarial-reviewer, skeptical-auditor, systematic-debugger,
+  rca-debugger, escalation-fixer)
+- **35 commands** (`/auto-ship`, `/plan`, `/review`, `/e2e`, `/worktree-start`,
+  `/workflow-classify`, ...)
+- **33 skills** under `skills/<name>/SKILL.md`
+- **22 hooks + 9 opt-in examples** covering 21 of the 27 official hook events
+- **14 rules** (Golden Principles, interaction, coding-style, verification, security,
+  testing, git-workflow, date-calculation, agents-v2, adversarial-review,
+  api-error-recovery, korean-writing-quality, task-grade-routing, unknowns-lens)
 - **4 MCP servers** (default) + 7 optional in `mcp-servers.optional.json`
 - CC CHIPS status bar submodule (optional)
 - `install.sh` / `install.ps1` for macOS/Linux/Windows
@@ -125,7 +132,9 @@ post-fix state.
 
 ## 6. Reviewer-facing checklist
 
-Every box below has been verified against `main` at commit `51bef80` (2026-04-24).
+Every box below was verified against `main` at commit `51bef80` (2026-04-24) for
+v3.0.1. v4.0.0 re-verification is pending: treat these as the v3.0.1 result, not as a
+statement about the current tree.
 
 - [x] README `Quick Start` shows the two-step plugin install (`/plugin marketplace add
       sangrokjung/claude-forge` then `/plugin install claude-forge`) and clearly discloses
@@ -133,8 +142,8 @@ Every box below has been verified against `main` at commit `51bef80` (2026-04-24
       Verified: `grep -c "/plugin marketplace add sangrokjung/claude-forge" README.md` = 4.
 - [x] `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` agree on the
       same `version` (CI job `marketplace-schema` enforces this). Verified: all three
-      version fields are `3.0.1`.
-- [x] `version` follows SemVer `X.Y.Z`. Verified: `3.0.1` matches regex `^[0-9]+\.[0-9]+\.[0-9]+$`.
+      version fields are `3.0.2`.
+- [x] `version` follows SemVer `X.Y.Z`. Verified: `3.0.2` matches regex `^[0-9]+\.[0-9]+\.[0-9]+$`.
 - [x] `license` is MIT and a `LICENSE` file exists at the repo root. Verified: `ls LICENSE` succeeds.
 - [x] `homepage` and `repository` URLs resolve and are public. Verified: `HTTP/2 200`
       on `https://github.com/sangrokjung/claude-forge`.
@@ -142,9 +151,16 @@ Every box below has been verified against `main` at commit `51bef80` (2026-04-24
       `anthropics/claude-plugins-official/external_plugins/` at the time of submission.
       Verified: `HTTP/2 404` on the external_plugins/claude-forge path.
 - [x] MCP servers and their licenses are listed in `docs/MCP-MIGRATION.md` with sources.
-- [x] A release tag (`v3.0.1`) and a corresponding GitHub Release exist. Verified via
-      `gh release view v3.0.1`.
+- [x] A release tag (`v3.0.2`) and a corresponding GitHub Release exist. Verified via
+      `gh release view v3.0.2`.
 - [x] Latest 4-way skeptical review results are linked or summarized (see section 5).
+- [ ] **Form actually submitted at <https://clau.de/plugin-directory-submission>** —
+      date submitted: `____`, confirmation email received in `____` inbox.
+      *If no confirmation email arrives within 24h, log a comment on
+      [anthropics/claude-plugins-official issue #984](https://github.com/anthropics/claude-plugins-official/issues/984)
+      (known portal-vs-directory sync gap) and check the submission portal directly.
+      This row exists to prevent the "submission packet prepared but form never
+      clicked" failure mode discovered during the 2026-05-02 audit.*
 
 ## 7. Submission form — field-by-field values (clau.de/plugin-directory-submission)
 
@@ -173,7 +189,7 @@ claude-forge
 **플러그인 설명 (Plugin description)** *
 ```
 claude-forge is an "oh-my-zsh for Claude Code" — a cohesive, production-grade
-distribution of 11 specialized agents, 33 slash commands, 24 skills, 15 hooks
+distribution of 11 specialized agents, 34 slash commands, 25 skills, 15 hooks
 (+ 9 opt-in examples covering 21 lifecycle events), 9 rule files, and a minimal
 4-server MCP set (playwright, context7, jina-reader, chrome-devtools pinned at
 0.23.0). It targets individual developers and small teams who want a security-
@@ -269,7 +285,7 @@ Installable today via (two-step, partial coverage):
  see docs/PLUGIN-VS-INSTALL-SH.md for the complete matrix.)
 
 Short description:
-  oh-my-zsh for Claude Code — 11 agents, 33 commands, 24 skills, 15 hooks +
+  oh-my-zsh for Claude Code — 11 agents, 34 commands, 25 skills, 15 hooks +
   9 opt-in examples (21 events), 9 rules, 4 MCP in one install.
 
 Security & quality:

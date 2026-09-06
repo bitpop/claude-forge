@@ -30,12 +30,13 @@ claude-forge distributes.
 | **Commands** (33) | ✅ Full | ✅ Full | Both paths register slash commands from `commands/`. |
 | **Skills** (24)   | ✅ Full | ⚠️ Partial | Plugin-mode skills work, but QJC skills that reach into `~/.claude/rules/` or `~/.claude/agents/` assume the symlink layout. |
 | **Agents** (11)   | ✅ Full | ❌ Not loaded | The plugin loader does not auto-register subagents from a plugin's `agents/` directory today. |
-| **Hooks** (15 + 9 opt-in examples, 21 events) | ✅ Full | ❌ Not loaded | See [`hooks/hooks.json`](../hooks/hooks.json): "Claude Code does not support a separate hooks.json. Actual hook settings must be in settings.json." Plugin install does not merge a user's `settings.json`. |
+| **Hooks** (15 + 9 opt-in examples, 21 events) | ✅ Full | ❌ Not loaded | Hooks are registered in the repo-root [`settings.json`](../settings.json) `hooks` block, and plugin install never merges a user's `settings.json`. This repo intentionally ships **no** `hooks/hooks.json`: Claude Code parses that exact path as a plugin hooks manifest, so a non-conforming file there breaks the entire plugin load (#52, #57). See [`hooks/README.md`](../hooks/README.md). |
 | **Rules** (9)     | ✅ Full | ❌ Not loaded | Rules live under `~/.claude/rules/` and are loaded globally; the plugin loader does not surface them. |
 | **MCP servers** (4, pinned) | ✅ Full | ❌ Not loaded | [`plugin.json`](../.claude-plugin/plugin.json) points `"mcpServers": "./mcp-servers.json"` but the loader does not act on that field. MCP servers come from `.mcp.json` / `mcp-servers.json`, wired by `install.sh`. |
 | **statusLine** (CC CHIPS submodule) | ✅ (submodule opt-in) | ❌ Not loaded | Requires `git clone --recurse-submodules`, which is optional. `install.sh` detects missing submodules and skips statusLine wiring with a one-line hint. |
 | **`settings.json` env / permissions** | ✅ Full | ❌ Not merged | Plugin install never touches the user's `settings.json`. |
 | **Shell aliases** (`cc`, `ccr`) | ✅ | ❌ | Installed by `install.sh` via shell profile edits. |
+| **Pre-commit secret guard** ([`scripts/install-precommit.sh`](../scripts/install-precommit.sh)) | ✅ Manual | ❌ Not loaded | Not part of `install.sh` either — it is a separate, opt-in `.git/hooks/pre-commit` installer you run yourself. The plugin loader has no mechanism to write into a consumer repo's `.git/hooks/`. |
 
 > Legend: ✅ fully supported · ⚠️ partial or conditional · ❌ not delivered via this path.
 
@@ -120,8 +121,8 @@ install` for partial/ephemeral use.**
 
 - [`README.md` — Quick Start](../README.md#-quick-start)
 - [`docs/MARKETPLACE-SUBMISSION.md`](./MARKETPLACE-SUBMISSION.md)
-- [`hooks/hooks.json`](../hooks/hooks.json) — own-repo confirmation that hooks.json is
-  not a supported Claude Code format
+- [`hooks/README.md`](../hooks/README.md) — why hook wiring lives only in
+  `settings.json`, and why no `hooks/hooks.json` is shipped
 - [`.claude-plugin/plugin.json`](../.claude-plugin/plugin.json) — plugin manifest
 - [`.claude-plugin/marketplace.json`](../.claude-plugin/marketplace.json) — marketplace
   manifest

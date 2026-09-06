@@ -53,45 +53,56 @@ Official `plugin.json` uses minimal fields (`name`, `description`, `author`). Cl
 
 ## 2. Skills Directory — PASS
 
-All 15 skills have correctly structured `SKILL.md` files:
+All 26 skills have correctly structured `SKILL.md` files:
 
 ```
 skills/
+├── blind-spot-pass/SKILL.md
 ├── build-system/SKILL.md
 ├── cache-components/SKILL.md
 ├── cc-dev-agent/SKILL.md
 ├── continuous-learning-v2/SKILL.md
+├── debugging-strategies/SKILL.md
+├── dependency-upgrade/SKILL.md
 ├── eval-harness/SKILL.md
+├── evaluating-code-models/SKILL.md
+├── evaluating-llms-harness/SKILL.md
+├── extract-errors/SKILL.md
 ├── frontend-code-review/SKILL.md
+├── loop-forge/SKILL.md
 ├── manage-skills/SKILL.md
 ├── prompts-chat/SKILL.md
+├── security-compliance/SKILL.md
 ├── security-pipeline/SKILL.md
 ├── session-wrap/SKILL.md
 ├── skill-factory/SKILL.md
 ├── strategic-compact/SKILL.md
+├── stride-analysis-patterns/SKILL.md
+├── summarize/SKILL.md
 ├── team-orchestrator/SKILL.md
+├── using-superpowers/SKILL.md
 ├── verification-engine/SKILL.md
 └── verify-implementation/SKILL.md
 ```
 
 | Check | Status | Details |
 |-------|--------|---------|
-| `skills/*/SKILL.md` pattern | PASS | All 15 skills follow `skills/{name}/SKILL.md` |
+| `skills/*/SKILL.md` pattern | PASS | All 26 skills follow `skills/{name}/SKILL.md` |
 | Frontmatter present | PASS | Checked `build-system` and `session-wrap` — both have `---` frontmatter with `name`, `description` |
 | Matches official pattern | PASS | Official example: `skills/example-skill/SKILL.md` |
 
 ---
 
-## 3. Hooks — WARNING
+## 3. Hooks — PASS
 
 | Check | Status | Details |
 |-------|--------|---------|
-| `hooks/hooks.json` exists | PASS | File present |
-| Claude Code native support | WARNING | `hooks.json` is a **reference document only** (see `_comment` field). Claude Code does NOT load a separate `hooks.json` — hooks must be in `settings.json` |
-| `settings.json` hooks | PASS | `settings.json` contains full `hooks` object matching `hooks.json` content |
+| `hooks/hooks.json` absent | PASS | Removed in v3.1.1. Claude Code reads that exact path as a *plugin hooks manifest*; a non-conforming file there makes the whole plugin fail to load (#52, #57) |
+| Hook wiring location | PASS | Single source of truth is the repo-root `settings.json` `hooks` block |
+| `timeout` units | PASS | Seconds (`5`, `10`). The deleted `hooks.json` had drifted to milliseconds (`5000`, `10000`) |
 | Shell scripts present | PASS | 15 `.sh` hook scripts in `hooks/` directory |
 
-**Note**: The `hooks.json` file explicitly states via `_comment`: "Reference document only. Claude Code does not support a separate hooks.json. Actual hook settings must be in settings.json." The `settings.json` correctly duplicates all hook definitions.
+**Note**: `settings.json` is the only place hooks are registered. See [`hooks/README.md`](../hooks/README.md) for why a second copy is not kept.
 
 ### Hook Scripts (15):
 
@@ -138,22 +149,22 @@ agents/
 | Check | Status | Details |
 |-------|--------|---------|
 | Files present | PASS | 11 agent `.md` files |
-| Frontmatter format | PASS (with note) | All agents use a custom format: line 1 is a comment (`# Part of Claude Forge`), then `---` YAML frontmatter with `name`, `description`, `tools` |
+| Frontmatter format | PASS | All agents start with `---` on line 1 (YAML frontmatter with `name`, `description`, `tools`, `model`, `memory`, `maxTurns`, `color`). No comment line precedes the fence; CI rejects one. |
 | Required fields | PASS | All have `name`, `description`, `tools` |
 
-**Format Note**: Official plugins don't specify an agents format in the example-plugin. Claude Forge agents use `---` YAML frontmatter which is the standard Claude Code agent format. The `# Part of Claude Forge` comment on line 1 before `---` is non-standard but Claude Code parser typically skips to the first `---`.
+**Format Note**: Official plugins don't specify an agents format in the example-plugin. Claude Forge agents use `---` YAML frontmatter, which is the standard Claude Code agent format, and the file starts with that fence. An earlier revision put a `# Part of Claude Forge` comment on line 1; it was removed because the CI frontmatter check requires the fence on line 1, and the contributing guide now says so.
 
 ---
 
 ## 5. Commands — PASS
 
-40 command files in `commands/`:
+34 command files in `commands/`:
 
 | Check | Status | Details |
 |-------|--------|---------|
-| Files present | PASS | 40 `.md` command files |
-| Frontmatter | PASS | Most commands have `---` YAML frontmatter with `description` and `allowed-tools` |
-| Some without frontmatter | WARNING | `build-fix.md`, `refactor-clean.md`, `eval.md` start with `#` heading instead of `---`. These may not register as slash commands properly |
+| Files present | PASS | 34 `.md` command files |
+| Frontmatter | PASS | 31 commands have `---` YAML frontmatter; all parse as valid YAML and any `argument-hint` is a string (enforced by CI since v3.1.1) |
+| Some without frontmatter | WARNING | `test-coverage.md`, `update-codemaps.md`, `update-docs.md` start with a `#` heading instead of `---`. These may not register as slash commands properly |
 
 ---
 
@@ -209,7 +220,7 @@ agents/
 
 ## 8. Rules — PASS
 
-9 rule files in `rules/`:
+10 rule files in `rules/`:
 
 ```
 rules/
@@ -221,12 +232,13 @@ rules/
 ├── interaction.md
 ├── security.md
 ├── testing.md
+├── unknowns-lens.md
 └── verification.md
 ```
 
 | Check | Status | Details |
 |-------|--------|---------|
-| Files present | PASS | 9 `.md` rule files |
+| Files present | PASS | 10 `.md` rule files |
 | Claude Code support | PASS | Rules in plugin `rules/` directory are auto-loaded by Claude Code |
 
 ---
@@ -251,13 +263,13 @@ These are not auto-loaded by Claude Code's plugin system but are used by the ins
 | Component | Status | Count | Notes |
 |-----------|--------|-------|-------|
 | `.claude-plugin/plugin.json` | PASS | 1 | Extra fields are harmless |
-| Skills (`SKILL.md`) | PASS | 15 | All correctly structured |
+| Skills (`SKILL.md`) | PASS | 26 | All correctly structured |
 | Hooks (shell scripts) | PASS | 15 | Loaded via `settings.json` |
-| `hooks.json` | WARNING | 1 | Reference only, not auto-loaded |
+| `hooks.json` | PASS | 0 | Removed in v3.1.1; wiring lives in `settings.json` |
 | Agents | PASS | 11 | Standard frontmatter format |
-| Commands | PASS | 40 | 3 without frontmatter |
+| Commands | PASS | 34 | 31 with frontmatter (all valid YAML, CI-enforced), 3 without |
 | MCP config | WARNING | 1 | Uses `mcp-servers.json` instead of `.mcp.json` |
-| Rules | PASS | 9 | Auto-loaded by plugin system |
+| Rules | PASS | 10 | Auto-loaded by plugin system |
 | `settings.json` | PASS | 1 | Requires install script merge |
 
 ### Action Items for Official Marketplace Submission
@@ -265,4 +277,4 @@ These are not auto-loaded by Claude Code's plugin system but are used by the ins
 1. **HIGH**: Create `.mcp.json` at plugin root with flat format (from `mcp-servers.json`)
 2. **MEDIUM**: Add frontmatter to `build-fix.md`, `refactor-clean.md`, `eval.md` commands
 3. **LOW**: Remove extra fields from `plugin.json` for strict compatibility (optional, not breaking)
-4. **LOW**: Remove `# Part of Claude Forge` comment line before `---` in agent files (optional)
+4. ~~**LOW**: Remove `# Part of Claude Forge` comment line before `---` in agent files~~ Done; the guide and CI now agree.
